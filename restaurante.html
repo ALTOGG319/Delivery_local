@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeliveryLocal - Peça sem taxa abusiva</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        :root {
+            --primary: #FF6B35;
+            --dark: #1A1A2E;
+            --gray: #666;
+            --light: #F5F7FA;
+            --success: #00C851;
+        }
+        
+        body {
+            background: var(--light);
+            color: var(--dark);
+        }
+        
+        .header {
+            background: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .cart-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.2rem;
+            border-radius: 20px;
+            position: relative;
+            font-size: 1rem;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--primary), #F7931E);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+        
+        .search-box {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 25px;
+            display: flex;
+            margin: 1rem 0;
+        }
+        
+        .search-input {
+            flex: 1;
+            border: none;
+            padding: 0.8rem;
+            outline: none;
+            font-size: 1rem;
+        }
+        
+        .search-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+            background: white;
+        }
+        
+        .filter-chip {
+            background: var(--light);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        
+        .filter-chip.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .restaurants {
+            padding: 1rem;
+        }
+        
+        .restaurant-card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .restaurant-img {
+            height: 150px;
+            background: linear-gradient(135deg, var(--primary), #F7931E);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+        }
+        
+        .restaurant-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .restaurant-info {
+            padding: 1rem;
+        }
+        
+        .restaurant-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+        
+        .restaurant-meta {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .restaurant-tags {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            background: #E8F5E9;
+            color: var(--success);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: flex-end;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 20px 20px 0 0;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            position: sticky;
+            top: 0;
+        }
+        
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .menu-list {
+            padding: 1rem;
+        }
+        
+        .menu-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .menu-item-img {
+            width: 80px;
+            height: 80px;
+            background: var(--light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .menu-item-info {
+            flex: 1;
+        }
+        
+        .menu-item-name {
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+        
+        .menu-item-price {
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .add-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--success);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+        }
+        
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 300;
+            transition: right 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cart-sidebar.open {
+            right: 0;
+        }
+        
+        .cart-header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .cart-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .cart-footer {
+            padding: 1rem;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .checkout-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .empty-cart {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+        
+        .payment-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .payment-option {
+            border: 2px solid #ddd;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .payment-option.selected {
+            border-color: var(--primary);
+            background: #FFF5F0;
+        }
+        
+        .footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            display: block;
+            margin: 0.5rem 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 400;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">🚀 DeliveryLocal</div>
+        <button class="cart-btn" onclick="toggleCart()">
+            🛒 <span class="cart-count" id="cartCount">0</span>
+        </button>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <h1>Comida boa sem taxa abusiva! 🎉</h1>
+        <div class="search-box">
+            <input type="text" class="search-input" placeholder="Buscar restaurantes..." id="searchInput">
+            <button class="search-btn">🔍</button>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <div class="filters">
+        <button class="filter-chip active" onclick="filterCategory('all')">Todos</button>
+        <button class="filter-chip" onclick="filterCategory('Hambúrguer')">🍔 Hambúrguer</button>
+        <button class="filter-chip" onclick="filterCategory('Pizza')">🍕 Pizza</button>
+        <button class="filter-chip" onclick="filterCategory('Japonês')">🍣 Japonês</button>
+        <button class="filter-chip" onclick="filterCategory('Saudável')">🥗 Saudável</button>
+    </div>
+
+    <!-- Restaurants -->
+    <section class="restaurants" id="restaurantsSection">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Carregando restaurantes...</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>🚀 DeliveryLocal - Sua cidade, sem taxas!</p>
+        <a href="restaurante.html">👨‍🍳 Área do Restaurante</a>
+        <a href="entregador.html">🛵 Área do Entregador</a>
+    </footer>
+
+    <!-- Menu Modal -->
+    <div class="modal" id="menuModal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modalTitle">Cardápio</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="menu-list" id="menuList"></div>
+        </div>
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>🛒 Seu Pedido</h3>
+            <button class="modal-close" onclick="toggleCart()">✕</button>
+        </div>
+        <div class="cart-items" id="cartItems">
+            <div class="empty-cart">
+                <p>Carrinho vazio 😕</p>
+            </div>
+        </div>
+        <div class="cart-footer" id="cartFooter" style="display: none;">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">R$ 0,00</span>
+            </div>
+            <button class="checkout-btn" onclick="openCheckout()">Finalizar Pedido</button>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkoutModal" onclick="closeCheckout(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>Finalizar Pedido</h2>
+                <button class="modal-close" onclick="closeCheckout()">✕</button>
+            </div>
+            <div style="padding: 1rem;">
+                <form id="checkoutForm" onsubmit="submitOrder(event)">
+                    <div class="form-group">
+                        <label>Seu Nome</label>
+                        <input type="text" id="customerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp</label>
+                        <input type="tel" id="customerPhone" placeholder="(11) 98765-4321" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Endereço</label>
+                        <input type="text" id="customerAddress" placeholder="Rua, número" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Complemento</label>
+                        <input type="text" id="addressComplement" placeholder="Apto, bloco">
+                    </div>
+                    <div class="form-group">
+                        <label>Forma de Pagamento</label>
+                        <div class="payment-options">
+                            <div class="payment-option selected" onclick="selectPayment(this, 'pix')">
+                                <div>💠</div>
+                                <div>PIX</div>
+                            </div>
+                            <div class="payment-option" onclick="selectPayment(this, 'card')">
+                                <div>💳</div>
+                                <div>Cartão</div>
+                            </div>
+                            <div class="payment-option" onclick="selectPayment(this, 'cash')">
+                                <div>💵</div>
+                                <div>Dinheiro</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="checkout-btn">Confirmar Pedido ✅</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // SUAS CREDENCIAIS DO SUPABASE
+        const SUPABASE_URL = 'https://xnonawfmgsnwmfhwkttb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_TMBk3hQTOLSOzqfObbaBQg_zc6vOnFk';
+        
+        // Inicializar Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Dados
+        let restaurants = [];
+        let menuItems = [];
+        let cart = [];
+        let currentRestaurant = null;
+        let selectedPayment = 'pix';
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRestaurants();
+            updateCart();
+        });
+
+        // Carregar restaurantes do Supabase
+        async function loadRestaurants() {
+            try {
+                const { data, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('is_open', true)
+                    .order('rating', { ascending: false });
+                
+                if (error) throw error;
+                
+                restaurants = data || [];
+            } catch (err) {
+                console.log('Erro:', err);
+                // Dados offline
+                restaurants = [
+                    { id: '1', name: 'Burger Top', category: 'Hambúrguer', rating: 4.8, delivery_time: '25-40 min', image_url: '🍔', is_open: true },
+                    { id: '2', name: 'Pizzaria Bella', category: 'Pizza', rating: 4.6, delivery_time: '35-50 min', image_url: '🍕', is_open: true },
+                    { id: '3', name: 'Sushi House', category: 'Japonês', rating: 4.9, delivery_time: '30-45 min', image_url: '🍣', is_open: true },
+                    { id: '4', name: 'Açaí Power', category: 'Saudável', rating: 4.7, delivery_time: '15-25 min', image_url: '🫐', is_open: true }
+                ];
+            }
+            
+            renderRestaurants();
+        }
+
+        // Renderizar restaurantes
+        function renderRestaurants(filter = 'all') {
+            const container = document.getElementById('restaurantsSection');
+            
+            let filtered = restaurants;
+            if (filter !== 'all') {
+                filtered = restaurants.filter(r => r.category === filter);
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 2rem;">Nenhum restaurante encontrado</p>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(r => `
+                <div class="restaurant-card" onclick="openMenu('${r.id}')">
+                    <div class="restaurant-img">
+                        ${r.image_url || '🍽️'}
+                        <div class="restaurant-badge" style="color: ${r.is_open ? 'var(--success)' : 'red'};">
+                            ${r.is_open ? '🟢 Aberto' : '🔴 Fechado'}
+                        </div>
+                    </div>
+                    <div class="restaurant-info">
+                        <div class="restaurant-name">${r.name}</div>
+                        <div class="restaurant-meta">
+                            ⭐ ${r.rating} • 🕐 ${r.delivery_time} • 🛵 Grátis
+                        </div>
+                        <div class="restaurant-tags">
+                            <span class="tag">${r.category}</span>
+                            <span class="tag">Entrega Grátis</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filtrar categoria
+        function filterCategory(category) {
+            document.querySelectorAll('.filter-chip').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(category) || (category === 'all' && btn.textContent.includes('Todos'))) {
+                    btn.classList.add('active');
+                }
+            });
+            renderRestaurants(category);
+        }
+
+        // Abrir menu
+        async function openMenu(restaurantId) {
+            currentRestaurant = restaurants.find(r => r.id === restaurantId);
+            if (!currentRestaurant) return;
+            
+            document.getElementById('modalTitle').textContent = currentRestaurant.name;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('menu_items')
+                    .select('*')
+                    .eq('restaurant_id', restaurantId)
+                    .eq('is_available', true);
+                
+                if (!error) menuItems = data || [];
+            } catch (err) {
+                menuItems = [
+                    { id: '1', name: 'X-Tudo Especial', description: 'Hambúrguer 180g, queijo, bacon', price: 24.90 },
+                    { id: '2', name: 'Duplo Bacon', description: '2 carnes, cheddar, bacon', price: 28.90 },
+                    { id: '3', name: 'Batata Frita G', description: '400g com cheddar e bacon', price: 18.90 }
+                ];
+            }
+            
+            renderMenu();
+            document.getElementById('menuModal').classList.add('active');
+        }
+
+        // Renderizar menu
+        function renderMenu() {
+            const list = document.getElementById('menuList');
+            list.innerHTML = menuItems.map(item => `
+                <div class="menu-item">
+                    <div class="menu-item-img">🍽️</div>
+                    <div class="menu-item-info">
+                        <div class="menu-item-name">${item.name}</div>
+                        <div style="color: var(--gray); font-size: 0.9rem;">${item.description}</div>
+                        <div class="menu-item-price">R$ ${item.price.toFixed(2)}</div>
+                    </div>
+                    <button class="add-btn" onclick="addToCart('${item.id}')">+</button>
+                </div>
+            `).join('');
+        }
+
+        // Fechar modal
+        function closeModal(event) {
+            if (!event || event.target.id === 'menuModal') {
+                document.getElementById('menuModal').classList.remove('active');
+            }
+        }
+
+        // Adicionar ao carrinho
+        function addToCart(itemId) {
+            const item = menuItems.find(m => m.id === itemId);
+            if (!item) return;
+            
+            const existing = cart.find(c => c.id === itemId);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({
+                    ...item,
+                    restaurant_id: currentRestaurant.id,
+                    restaurant_name: currentRestaurant.name,
+                    quantity: 1
+                });
+            }
+            
+            updateCart();
+            showToast(`${item.name} adicionado!`);
+        }
+
+        // Atualizar carrinho
+        function updateCart() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+            
+            const cartItems = document.getElementById('cartItems');
+            const cartFooter = document.getElementById('cartFooter');
+            
+            if (cart.length === 0) {
+                cartItems.innerHTML = '<div class="empty-cart"><p>Carrinho vazio 😕</p></div>';
+                cartFooter.style.display = 'none';
+                return;
+            }
+            
+            cartItems.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <div>
+                        <div style="font-weight: bold;">${item.name}</div>
+                        <div style="color: var(--gray); font-size: 0.9rem;">${item.restaurant_name}</div>
+                        <div style="color: var(--success); font-weight: bold;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button onclick="updateQuantity('${item.id}', -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #ddd;">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateQuantity('${item.id}', 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--success); color: white;">+</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            document.getElementById('cartTotal').textContent = `R$ ${total.toFixed(2)}`;
+            cartFooter.style.display = 'block';
+            
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        // Atualizar quantidade
+        function updateQuantity(itemId, change) {
+            const item = cart.find(c => c.id === itemId);
+            if (!item) return;
+            
+            item.quantity += change;
+            if (item.quantity <= 0) {
+                cart = cart.filter(c => c.id !== itemId);
+            }
+            updateCart();
+        }
+
+        // Toggle cart
+        function toggleCart() {
+            document.getElementById('cartSidebar').classList.toggle('open');
+        }
+
+        // Abrir checkout
+        function openCheckout() {
+            document.getElementById('checkoutModal').classList.add('active');
+        }
+
+        // Fechar checkout
+        function closeCheckout(event) {
+            if (!event || event.target.id === 'checkoutModal') {
+                document.getElementById('checkoutModal').classList.remove('active');
+            }
+        }
+
+        // Selecionar pagamento
+        function selectPayment(element, method) {
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedPayment = method;
+        }
+
+        // Submeter pedido
+        async function submitOrder(event) {
+            event.preventDefault();
+            
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const appFee = subtotal * 0.05;
+            const total = subtotal + appFee;
+            
+            const orderData = {
+                customer_name: document.getElementById('customerName').value,
+                customer_phone: document.getElementById('customerPhone').value,
+                customer_address: document.getElementById('customerAddress').value,
+                address_complement: document.getElementById('addressComplement').value,
+                restaurant_id: cart[0].restaurant_id,
+                items: cart.map(item => ({
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
+                subtotal: subtotal,
+                app_fee: appFee,
+                total: total,
+                payment_method: selectedPayment,
+                status: 'pending'
+            };
+            
+            try {
+                const { data, error } = await supabase
+                    .from('orders')
+                    .insert([orderData])
+                    .select();
+                
+                if (error) throw error;
+                
+                sendWhatsApp(orderData, data[0].id);
+                
+                cart = [];
+                updateCart();
+                closeCheckout();
+                toggleCart();
+                showToast('Pedido enviado! ✅');
+                
+            } catch (err) {
+                console.error('Erro:', err);
+                // Modo offline
+                sendWhatsApp(orderData, 'OFFLINE-' + Date.now());
+                cart = [];
+                updateCart();
+                closeCheckout();
+                toggleCart();
+                showToast('Pedido enviado! (Modo offline) ✅');
+            }
+        }
+
+        // Enviar WhatsApp
+        function sendWhatsApp(order, orderId) {
+            const phone = '5511999999999';
+            let message = `*🚀 NOVO PEDIDO*%0A%0A`;
+            message += `*Cliente:* ${order.customer_name}%0A`;
+            message += `*Telefone:* ${order.customer_phone}%0A`;
+            message += `*Endereço:* ${order.customer_address}%0A%0A`;
+            message += `*Itens:*%0A`;
+            
+            order.items.forEach(item => {
+                message += `• ${item.quantity}x ${item.name} - R$ ${(item.price * item.quantity).toFixed(2)}%0A`;
+            });
+            
+            message += `%0A*Total:* R$ ${order.total.toFixed(2)}%0A`;
+            message += `*Pagamento:* ${order.payment_method.toUpperCase()}`;
+            
+            window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Restaurar carrinho
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart) {
+            cart = JSON.parse(savedCart);
+            updateCart();
+        }
+    </script>
+</body>
+</html>
