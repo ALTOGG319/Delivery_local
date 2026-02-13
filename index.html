@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeliveryLocal - Peça sua comida favorita</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 1rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; }
+        .nav-links a:hover { background: rgba(255,255,255,0.2); }
+        .hero { background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; padding: 60px 20px; text-align: center; }
+        .hero h1 { font-size: 3rem; margin-bottom: 1rem; }
+        .hero p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; }
+        .search-box { max-width: 600px; margin: 0 auto; background: white; border-radius: 50px; padding: 5px; display: flex; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .search-box input { flex: 1; border: none; padding: 15px 25px; font-size: 1rem; outline: none; border-radius: 50px; }
+        .search-box button { background: #FF6B35; color: white; border: none; padding: 15px 30px; border-radius: 50px; font-weight: 600; cursor: pointer; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; }
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-bottom: 40px; }
+        .category-card { background: white; padding: 20px; border-radius: 15px; text-align: center; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .category-card:hover { transform: translateY(-5px); }
+        .category-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .restaurant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        .restaurant-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.3s; }
+        .restaurant-card:hover { transform: translateY(-5px); }
+        .restaurant-image { width: 100%; height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; }
+        .restaurant-image img { width: 100%; height: 100%; object-fit: cover; }
+        .restaurant-info { padding: 20px; }
+        .restaurant-header { display: flex; justify-content: space-between; align-items: start; }
+        .restaurant-name { font-size: 1.2rem; font-weight: 700; }
+        .restaurant-rating { background: #FFF3E0; color: #FF6B35; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+        .restaurant-category { color: #888; font-size: 0.9rem; margin: 10px 0; }
+        .restaurant-details { display: flex; gap: 15px; color: #666; font-size: 0.9rem; }
+        .status-open { background: #E8F5E9; color: #2E7D32; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+        .status-closed { background: #FFEBEE; color: #C62828; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 20px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-close { position: absolute; top: 20px; right: 20px; background: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 10; }
+        .restaurant-hero { height: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative; display: flex; align-items: end; padding: 30px; color: white; }
+        .restaurant-hero img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        .restaurant-hero-content { position: relative; z-index: 1; }
+        .menu-section { padding: 30px; }
+        .menu-category { margin-bottom: 30px; }
+        .menu-category h3 { font-size: 1.3rem; margin-bottom: 15px; color: #333; border-bottom: 2px solid #FF6B35; padding-bottom: 10px; display: inline-block; }
+        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; border: 1px solid #eee; border-radius: 15px; margin-bottom: 15px; }
+        .menu-item:hover { border-color: #FF6B35; }
+        .menu-item-name { font-weight: 600; font-size: 1.1rem; }
+        .menu-item-desc { color: #888; font-size: 0.9rem; }
+        .menu-item-price { font-weight: 700; color: #FF6B35; font-size: 1.2rem; }
+        .add-btn { background: #FF6B35; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; }
+        .cart-sidebar { position: fixed; right: -400px; top: 0; width: 400px; height: 100%; background: white; box-shadow: -5px 0 20px rgba(0,0,0,0.1); z-index: 1001; transition: right 0.3s; padding: 30px; display: flex; flex-direction: column; }
+        .cart-sidebar.active { right: 0; }
+        .cart-icon { position: fixed; bottom: 30px; right: 30px; background: #FF6B35; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; z-index: 999; }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: #333; color: white; width: 25px; height: 25px; border-radius: 50%; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+        .checkout-btn { width: 100%; background: #FF6B35; color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 1rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 15px 30px; border-radius: 50px; opacity: 0; transition: all 0.3s; z-index: 1002; }
+        .toast.show { opacity: 1; }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .restaurant-grid { grid-template-columns: 1fr; }
+            .cart-sidebar { width: 100%; right: -100%; }
+            .form-row { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span>🚀</span>
+                <span>DeliveryLocal</span>
+            </div>
+            <nav class="nav-links">
+                <a href="index.html">Início</a>
+                <a href="restaurante.html">Área do Restaurante</a>
+                <a href="entregador.html">Área do Entregador</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>Peça sua comida favorita</h1>
+        <p>Os melhores restaurantes da sua cidade entregues na sua porta</p>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Buscar restaurantes...">
+            <button onclick="searchRestaurants()">Buscar</button>
+        </div>
+    </section>
+
+    <div class="container">
+        <section class="categories">
+            <h2 class="section-title">Categorias</h2>
+            <div class="category-grid">
+                <div class="category-card" onclick="filterByCategory('Hambúrguer')"><div class="category-icon">🍔</div><div>Hambúrguer</div></div>
+                <div class="category-card" onclick="filterByCategory('Pizza')"><div class="category-icon">🍕</div><div>Pizza</div></div>
+                <div class="category-card" onclick="filterByCategory('Japonês')"><div class="category-icon">🍱</div><div>Japonês</div></div>
+                <div class="category-card" onclick="filterByCategory('Brasileira')"><div class="category-icon">🍛</div><div>Brasileira</div></div>
+                <div class="category-card" onclick="filterByCategory('Saudável')"><div class="category-icon">🥗</div><div>Saudável</div></div>
+                <div class="category-card" onclick="filterByCategory('Doces')"><div class="category-icon">🍰</div><div>Doces</div></div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Restaurantes</h2>
+            <div class="restaurant-grid" id="restaurantGrid">
+                <div style="text-align: center; padding: 40px; grid-column: 1/-1;">Carregando...</div>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal" id="restaurantModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <div class="cart-sidebar" id="cartSidebar">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>🛒 Seu Pedido</h3>
+            <button onclick="toggleCart()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+        </div>
+        <div id="cartItems" style="flex: 1; overflow-y: auto;"></div>
+        <div style="border-top: 2px solid #eee; padding-top: 20px;">
+            <div style="display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 700; margin-bottom: 20px;">
+                <span>Total:</span>
+                <span id="cartTotal">R$ 0,00</span>
+            </div>
+            <button class="checkout-btn" onclick="showCheckout()" id="checkoutBtn" disabled>Finalizar Pedido</button>
+        </div>
+    </div>
+
+    <div class="cart-icon" onclick="toggleCart()">
+        🛒
+        <div class="cart-count" id="cartCount">0</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://xnonawfmgsnwmfhwkttb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhub25hd2ZtZ3Nud21maHdrdHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NjI1MTgsImV4cCI6MjA4NjQzODUxOH0.TF2fI8FjHM9e7lA_DFi0ktAfrBNHgy5M-1aJlqb-qKk';
+
+        let supabase, currentRestaurant = null, cart = [], restaurants = [], menuItems = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            await loadRestaurants();
+        });
+
+        async function loadRestaurants() {
+            const { data, error } = await supabase.from('restaurants').select('*').order('name');
+            if (error) { showToast('Erro ao carregar restaurantes'); return; }
+            restaurants = data || [];
+            displayRestaurants(restaurants);
+        }
+
+        function displayRestaurants(data) {
+            const grid = document.getElementById('restaurantGrid');
+            if (data.length === 0) { grid.innerHTML = '<div style="text-align: center; padding: 40px;">Nenhum restaurante encontrado</div>'; return; }
+            grid.innerHTML = data.map(r => `
+                <div class="restaurant-card" onclick="openRestaurant('${r.id}')">
+                    <div class="restaurant-image">${r.image_url ? `<img src="${r.image_url}" alt="${r.name}">` : '🍽️'}</div>
+                    <div class="restaurant-info">
+                        <div class="restaurant-header">
+                            <div class="restaurant-name">${r.name}</div>
+                            <div class="restaurant-rating">⭐ ${r.rating || '4.5'}</div>
+                        </div>
+                        <div class="restaurant-category">${r.category || 'Geral'}</div>
+                        <div class="restaurant-details">
+                            <span>🕒 ${r.delivery_time || '30-50 min'}</span>
+                            <span>🛵 R$ ${r.delivery_fee || '5.00'}</span>
+                        </div>
+                        <span class="${r.is_open ? 'status-open' : 'status-closed'}">${r.is_open ? '🟢 Aberto' : '🔴 Fechado'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterByCategory(cat) { displayRestaurants(restaurants.filter(r => r.category === cat)); }
+        function searchRestaurants() { const q = document.getElementById('searchInput').value.toLowerCase(); displayRestaurants(restaurants.filter(r => r.name.toLowerCase().includes(q))); }
+
+        async function openRestaurant(id) {
+            currentRestaurant = restaurants.find(r => r.id === id);
+            document.getElementById('restaurantModal').classList.add('active');
+            const { data } = await supabase.from('menu_items').select('*').eq('restaurant_id', id).eq('is_available', true).order('category');
+            menuItems = data || [];
+
+            const categories = {};
+            menuItems.forEach(i => { const c = i.category || 'Outros'; if (!categories[c]) categories[c] = []; categories[c].push(i); });
+
+            document.getElementById('modalContent').innerHTML = `
+                <div class="restaurant-hero">
+                    ${currentRestaurant.image_url ? `<img src="${currentRestaurant.image_url}">` : ''}
+                    <div class="restaurant-hero-content">
+                        <h2>${currentRestaurant.name}</h2>
+                        <p>${currentRestaurant.category || 'Geral'} • ⭐ ${currentRestaurant.rating || '4.5'}</p>
+                    </div>
+                </div>
+                <div class="menu-section">
+                    ${Object.entries(categories).map(([cat, items]) => `
+                        <div class="menu-category">
+                            <h3>${cat}</h3>
+                            ${items.map(i => `
+                                <div class="menu-item">
+                                    <div>
+                                        <div class="menu-item-name">${i.name}</div>
+                                        ${i.description ? `<div class="menu-item-desc">${i.description}</div>` : ''}
+                                        <div class="menu-item-price">R$ ${parseFloat(i.price).toFixed(2)}</div>
+                                    </div>
+                                    <button class="add-btn" onclick="addToCart('${i.id}')">+</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function closeModal() { document.getElementById('restaurantModal').classList.remove('active'); }
+        function toggleCart() { document.getElementById('cartSidebar').classList.toggle('active'); }
+
+        function addToCart(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (cart.length > 0 && cart[0].restaurant_id !== item.restaurant_id) {
+                if (!confirm('Carrinho de outro restaurante. Limpar?')) return;
+                cart = [];
+            }
+            const existing = cart.find(i => i.id === itemId);
+            if (existing) existing.quantity++; else cart.push({ ...item, quantity: 1 });
+            updateCart();
+            showToast(`${item.name} adicionado`);
+        }
+
+        function updateCart() {
+            const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+            const total = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+            document.getElementById('cartCount').textContent = totalItems;
+            document.getElementById('cartTotal').textContent = `R$ ${total.toFixed(2)}`;
+            document.getElementById('checkoutBtn').disabled = cart.length === 0;
+            document.getElementById('cartItems').innerHTML = cart.length === 0 ? '<p style="text-align: center; color: #888;">Carrinho vazio</p>' : 
+                cart.map((item, idx) => `
+                    <div style="display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee;">
+                        <div>
+                            <div style="font-weight: 600;">${item.name}</div>
+                            <div style="color: #FF6B35;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button onclick="updateQty(${idx}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer;">-</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="updateQty(${idx}, 1)" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer;">+</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function updateQty(idx, change) { cart[idx].quantity += change; if (cart[idx].quantity <= 0) cart.splice(idx, 1); updateCart(); }
+
+        function showCheckout() {
+            const total = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+            document.getElementById('modalContent').innerHTML = `
+                <div style="padding: 30px;">
+                    <h2 style="margin-bottom: 20px;">Finalizar Pedido</h2>
+                    <div class="form-group"><label>Nome</label><input type="text" id="customerName" required></div>
+                    <div class="form-group"><label>Telefone</label><input type="tel" id="customerPhone" required></div>
+                    <div class="form-group"><label>Endereço</label><input type="text" id="customerAddress" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Número</label><input type="text" id="addressNumber"></div>
+                        <div class="form-group"><label>Complemento</label><input type="text" id="addressComplement"></div>
+                    </div>
+                    <div class="form-group"><label>CEP</label><input type="text" id="cep"></div>
+                    <div class="form-group">
+                        <label>Pagamento</label>
+                        <select id="paymentMethod">
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao">Cartão</option>
+                            <option value="pix">PIX</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Observações</label><textarea id="notes" rows="3"></textarea></div>
+                    <div style="background: #f0f0f0; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h4>Resumo:</h4>
+                        ${cart.map(i => `<div style="display: flex; justify-content: space-between; margin: 8px 0;"><span>${i.quantity}x ${i.name}</span><span>R$ ${(i.price * i.quantity).toFixed(2)}</span></div>`).join('')}
+                        <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd; font-weight: 700; font-size: 1.2rem;">
+                            <span>Total:</span><span style="color: #FF6B35;">R$ ${total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <button class="checkout-btn" onclick="placeOrder()">Confirmar Pedido</button>
+                </div>
+            `;
+        }
+
+        async function placeOrder() {
+            const orderData = {
+                customer_name: document.getElementById('customerName').value,
+                customer_phone: document.getElementById('customerPhone').value,
+                customer_address: document.getElementById('customerAddress').value,
+                address_number: document.getElementById('addressNumber').value,
+                address_complement: document.getElementById('addressComplement').value,
+                cep: document.getElementById('cep').value,
+                restaurant_id: cart[0].restaurant_id,
+                items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+                subtotal: cart.reduce((s, i) => s + (i.price * i.quantity), 0),
+                delivery_fee: parseFloat(currentRestaurant.delivery_fee || 0),
+                app_fee: cart.reduce((s, i) => s + (i.price * i.quantity), 0) * 0.05,
+                total: cart.reduce((s, i) => s + (i.price * i.quantity), 0) + parseFloat(currentRestaurant.delivery_fee || 0) + (cart.reduce((s, i) => s + (i.price * i.quantity), 0) * 0.05),
+                payment_method: document.getElementById('paymentMethod').value,
+                notes: document.getElementById('notes').value,
+                status: 'pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase.from('orders').insert([orderData]);
+            if (error) { showToast('Erro ao fazer pedido'); return; }
+
+            showToast('Pedido realizado com sucesso! 🎉');
+            cart = []; updateCart(); closeModal(); toggleCart();
+        }
+
+        function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+        document.getElementById('restaurantModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    </script>
+</body>
+</html>

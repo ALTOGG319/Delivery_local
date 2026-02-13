@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área do Entregador - DeliveryLocal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #333; }
+        .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; }
+        .login-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 450px; width: 100%; }
+        .login-logo { text-align: center; margin-bottom: 30px; }
+        .login-logo h1 { color: #667eea; font-size: 1.8rem; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input { width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: #667eea; }
+        .login-btn { width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+        .back-link { text-align: center; margin-top: 20px; }
+        .back-link a { color: #667eea; text-decoration: none; }
+        .dashboard { display: none; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .online-toggle { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 30px; cursor: pointer; }
+        .online-toggle.active { background: rgba(76,175,80,0.3); }
+        .toggle-dot { width: 12px; height: 12px; background: #f44336; border-radius: 50%; }
+        .online-toggle.active .toggle-dot { background: #4CAF50; box-shadow: 0 0 10px #4CAF50; }
+        .logout-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+        .main-content { padding: 30px; max-width: 1200px; margin: 0 auto; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+        .stat-icon { font-size: 2rem; margin-bottom: 10px; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; }
+        .tab { padding: 12px 24px; border: none; background: none; font-weight: 600; color: #888; cursor: pointer; border-radius: 8px; }
+        .tab.active { color: #667eea; background: rgba(102,126,234,0.1); }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .delivery-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #4CAF50; margin-bottom: 20px; }
+        .delivery-card.delivering { border-left-color: #FF9800; }
+        .delivery-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .delivery-status { padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; background: #E8F5E9; color: #2E7D32; }
+        .delivery-route { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding: 20px; background: #f9f9f9; border-radius: 12px; }
+        .route-point { flex: 1; }
+        .route-label { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .route-address { font-weight: 600; }
+        .delivery-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .detail-item { display: flex; align-items: center; gap: 10px; }
+        .detail-icon { width: 40px; height: 40px; background: rgba(102,126,234,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .delivery-items { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .delivery-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .delivery-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 2px solid #f0f0f0; }
+        .delivery-value { font-size: 1.2rem; font-weight: 700; color: #667eea; }
+        .action-btn { padding: 12px 24px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; }
+        .history-table { width: 100%; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .history-table th { background: #667eea; color: white; padding: 15px; text-align: left; }
+        .history-table td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .profile-card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 600px; }
+        .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+        .profile-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; }
+        .profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; padding: 16px 24px; border-radius: 12px; opacity: 0; transition: all 0.3s; z-index: 1000; }
+        .toast.show { opacity: 1; }
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 15px; }
+            .delivery-route { flex-direction: column; text-align: center; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <div class="login-logo">
+                <h1>🛵 Área do Entregador</h1>
+                <p>Faça login para começar a entregar</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                </div>
+                <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+            </form>
+            <div class="back-link">
+                <a href="index.html">← Voltar para o site</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <header class="header">
+            <h1>🛵 DeliveryLocal - Entregador</h1>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div class="online-toggle" id="onlineToggle" onclick="toggleOnlineStatus()">
+                    <div class="toggle-dot"></div>
+                    <span id="onlineText">Offline</span>
+                </div>
+                <button class="logout-btn" onclick="logout()">🚪 Sair</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-value" id="totalDeliveries">0</div>
+                    <div style="color: #888; font-size: 0.9rem;">Entregas Hoje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="todayEarnings">R$ 0</div>
+                    <div style="color: #888; font-size: 0.9rem;">Ganhos Hoje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="rating">0.0</div>
+                    <div style="color: #888; font-size: 0.9rem;">Avaliação</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('available')">📋 Disponíveis</button>
+                <button class="tab" onclick="showTab('mydeliveries')">🛵 Minhas Entregas</button>
+                <button class="tab" onclick="showTab('history')">📜 Histórico</button>
+                <button class="tab" onclick="showTab('profile')">👤 Perfil</button>
+            </div>
+
+            <div class="content-section active" id="availableSection">
+                <div id="availableList">
+                    <div style="text-align: center; padding: 60px; color: #888;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">🛵</div>
+                        <h3>Nenhuma entrega disponível</h3>
+                        <p>Fique online para receber novos pedidos</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section" id="mydeliveriesSection">
+                <div id="myDeliveriesList">
+                    <div style="text-align: center; padding: 60px; color: #888;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">📦</div>
+                        <h3>Você não tem entregas ativas</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section" id="historySection">
+                <div class="history-table">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr><th>Data</th><th>Restaurante</th><th>Cliente</th><th>Valor</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 40px;">Nenhuma entrega realizada</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="content-section" id="profileSection">
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar">🛵</div>
+                        <div>
+                            <h3 id="profileName">Nome</h3>
+                            <p id="profileEmail" style="color: #888;">email@exemplo.com</p>
+                        </div>
+                    </div>
+                    <div class="profile-stats">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #667eea;" id="profileTotalDeliveries">0</div>
+                            <div style="font-size: 0.85rem; color: #888;">Entregas Totais</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #667eea;" id="profileTotalEarnings">R$ 0</div>
+                            <div style="font-size: 0.85rem; color: #888;">Ganhos Totais</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #667eea;" id="profileRating">0.0</div>
+                            <div style="font-size: 0.85rem; color: #888;">Avaliação</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://xnonawfmgsnwmfhwkttb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhub25hd2ZtZ3Nud21maHdrdHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NjI1MTgsImV4cCI6MjA4NjQzODUxOH0.TF2fI8FjHM9e7lA_DFi0ktAfrBNHgy5M-1aJlqb-qKk';
+
+        let supabase, currentUser = null, availableOrders = [], myDeliveries = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            const savedUser = localStorage.getItem('deliveryUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+                await loadDelivererData();
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.textContent = 'Entrando...';
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const { data: deliverer, error } = await supabase.from('delivery_people').select('*').eq('email', email).single();
+                if (error || !deliverer || deliverer.password !== password) throw new Error('Email ou senha incorretos');
+
+                currentUser = deliverer;
+                localStorage.setItem('deliveryUser', JSON.stringify(deliverer));
+                showDashboard();
+                await loadDelivererData();
+                showToast('Login realizado!');
+            } catch (error) {
+                showToast(error.message);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Entrar';
+            }
+        });
+
+        async function loadDelivererData() {
+            document.getElementById('totalDeliveries').textContent = currentUser.total_deliveries || 0;
+            document.getElementById('todayEarnings').textContent = `R$ ${(currentUser.total_earnings || 0).toFixed(2)}`;
+            document.getElementById('rating').textContent = (currentUser.rating || 0).toFixed(1);
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileEmail').textContent = currentUser.email;
+            document.getElementById('profileTotalDeliveries').textContent = currentUser.total_deliveries || 0;
+            document.getElementById('profileTotalEarnings').textContent = `R$ ${(currentUser.total_earnings || 0).toFixed(2)}`;
+            document.getElementById('profileRating').textContent = (currentUser.rating || 0).toFixed(1);
+
+            if (currentUser.is_online) {
+                document.getElementById('onlineToggle').classList.add('active');
+                document.getElementById('onlineText').textContent = 'Online';
+            }
+
+            await loadAvailableOrders();
+            await loadMyDeliveries();
+            await loadHistory();
+            subscribeToOrders();
+        }
+
+        async function loadAvailableOrders() {
+            const { data } = await supabase.from('orders').select('*, restaurants:restaurant_id(name, address, phone)').eq('status', 'ready').is('delivery_person_id', null).order('created_at', { ascending: false });
+            availableOrders = data || [];
+            displayAvailableOrders();
+        }
+
+        function displayAvailableOrders() {
+            const list = document.getElementById('availableList');
+            if (availableOrders.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 60px; color: #888;"><div style="font-size: 4rem; margin-bottom: 20px;">🛵</div><h3>Nenhuma entrega disponível</h3><p>Fique online para receber novos pedidos</p></div>';
+                return;
+            }
+            list.innerHTML = availableOrders.map(order => `
+                <div class="delivery-card">
+                    <div class="delivery-header">
+                        <span style="font-weight: 700;">Pedido #${order.id.slice(-6).toUpperCase()}</span>
+                        <span class="delivery-status">Disponível</span>
+                    </div>
+                    <div class="delivery-route">
+                        <div class="route-point">
+                            <div class="route-label">Retirar em</div>
+                            <div class="route-address">${order.restaurants?.name || 'Restaurante'}</div>
+                        </div>
+                        <div style="font-size: 1.5rem; color: #667eea;">→</div>
+                        <div class="route-point">
+                            <div class="route-label">Entregar em</div>
+                            <div class="route-address">${order.customer_address}${order.address_number ? ', ' + order.address_number : ''}</div>
+                        </div>
+                    </div>
+                    <div class="delivery-details">
+                        <div class="detail-item">
+                            <div class="detail-icon">💰</div>
+                            <div><div style="font-size: 0.8rem; color: #888;">Valor</div><div style="font-weight: 600;">R$ ${parseFloat(order.total).toFixed(2)}</div></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-icon">🛵</div>
+                            <div><div style="font-size: 0.8rem; color: #888;">Sua taxa</div><div style="font-weight: 600;">R$ ${(parseFloat(order.delivery_fee) * 0.7).toFixed(2)}</div></div>
+                        </div>
+                    </div>
+                    <div class="delivery-items">
+                        ${(order.items || []).map(i => `<div class="delivery-item"><span>${i.quantity}x ${i.name}</span></div>`).join('')}
+                    </div>
+                    <div class="delivery-footer">
+                        <div class="delivery-value">Você recebe: R$ ${(parseFloat(order.delivery_fee) * 0.7).toFixed(2)}</div>
+                        <button class="action-btn btn-primary" onclick="acceptDelivery('${order.id}')">Aceitar Entrega</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadMyDeliveries() {
+            const { data } = await supabase.from('orders').select('*, restaurants:restaurant_id(name, address, phone)').eq('delivery_person_id', currentUser.id).eq('status', 'delivering').order('created_at', { ascending: false });
+            myDeliveries = data || []; displayMyDeliveries();
+        }
+
+        function displayMyDeliveries() {
+            const list = document.getElementById('myDeliveriesList');
+            if (myDeliveries.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 60px; color: #888;"><div style="font-size: 4rem; margin-bottom: 20px;">📦</div><h3>Você não tem entregas ativas</h3></div>';
+                return;
+            }
+            list.innerHTML = myDeliveries.map(order => `
+                <div class="delivery-card delivering">
+                    <div class="delivery-header">
+                        <span style="font-weight: 700;">Pedido #${order.id.slice(-6).toUpperCase()}</span>
+                        <span class="delivery-status" style="background: #FFF3E0; color: #E65100;">Em entrega</span>
+                    </div>
+                    <div class="delivery-route">
+                        <div class="route-point">
+                            <div class="route-label">Retirar em</div>
+                            <div class="route-address">${order.restaurants?.name || 'Restaurante'}</div>
+                            <small>📞 ${order.restaurants?.phone || ''}</small>
+                        </div>
+                        <div style="font-size: 1.5rem; color: #667eea;">→</div>
+                        <div class="route-point">
+                            <div class="route-label">Entregar em</div>
+                            <div class="route-address">${order.customer_address}${order.address_number ? ', ' + order.address_number : ''}</div>
+                            <small>📞 ${order.customer_phone}</small>
+                        </div>
+                    </div>
+                    <div class="delivery-details">
+                        <div class="detail-item">
+                            <div class="detail-icon">👤</div>
+                            <div><div style="font-size: 0.8rem; color: #888;">Cliente</div><div style="font-weight: 600;">${order.customer_name}</div></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-icon">💰</div>
+                            <div><div style="font-size: 0.8rem; color: #888;">Pagamento</div><div style="font-weight: 600;">${order.payment_method === 'dinheiro' ? 'Dinheiro' : 'Online'}</div></div>
+                        </div>
+                    </div>
+                    <div class="delivery-items">
+                        ${(order.items || []).map(i => `<div class="delivery-item"><span>${i.quantity}x ${i.name}</span></div>`).join('')}
+                    </div>
+                    <div class="delivery-footer">
+                        <div class="delivery-value">Sua taxa: R$ ${(parseFloat(order.delivery_fee) * 0.7).toFixed(2)}</div>
+                        <button class="action-btn btn-success" onclick="completeDelivery('${order.id}')">✓ Entregue</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadHistory() {
+            const { data } = await supabase.from('orders').select('*, restaurants:restaurant_id(name)').eq('delivery_person_id', currentUser.id).eq('status', 'delivered').order('created_at', { ascending: false }).limit(20);
+            const tbody = document.getElementById('historyTableBody');
+            if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">Nenhuma entrega realizada</td></tr>'; return; }
+            tbody.innerHTML = data.map(order => `
+                <tr>
+                    <td>${new Date(order.created_at).toLocaleString('pt-BR')}</td>
+                    <td>${order.restaurants?.name || 'Restaurante'}</td>
+                    <td>${order.customer_name}</td>
+                    <td style="color: #4CAF50; font-weight: 600;">R$ ${(parseFloat(order.delivery_fee) * 0.7).toFixed(2)}</td>
+                    <td><span style="background: #E8F5E9; color: #2E7D32; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;">Entregue</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function acceptDelivery(orderId) {
+            if (!currentUser.is_online) { showToast('Você precisa estar online'); return; }
+            await supabase.from('orders').update({ delivery_person_id: currentUser.id, status: 'delivering', updated_at: new Date().toISOString() }).eq('id', orderId);
+            showToast('Entrega aceita! 🎉');
+            await loadAvailableOrders(); await loadMyDeliveries(); showTab('mydeliveries');
+        }
+
+        async function completeDelivery(orderId) {
+            await supabase.from('orders').update({ status: 'delivered', updated_at: new Date().toISOString() }).eq('id', orderId);
+            const order = myDeliveries.find(o => o.id === orderId);
+            const newEarnings = (currentUser.total_earnings || 0) + (parseFloat(order.delivery_fee) * 0.7);
+            const newDeliveries = (currentUser.total_deliveries || 0) + 1;
+            await supabase.from('delivery_people').update({ total_earnings: newEarnings, total_deliveries: newDeliveries }).eq('id', currentUser.id);
+            currentUser.total_earnings = newEarnings; currentUser.total_deliveries = newDeliveries;
+            localStorage.setItem('deliveryUser', JSON.stringify(currentUser));
+            showToast('Entrega concluída! 💰');
+            await loadMyDeliveries(); await loadHistory(); await loadDelivererData();
+        }
+
+        async function toggleOnlineStatus() {
+            const newStatus = !currentUser.is_online;
+            await supabase.from('delivery_people').update({ is_online: newStatus }).eq('id', currentUser.id);
+            currentUser.is_online = newStatus; localStorage.setItem('deliveryUser', JSON.stringify(currentUser));
+            const toggle = document.getElementById('onlineToggle');
+            const text = document.getElementById('onlineText');
+            if (newStatus) { toggle.classList.add('active'); text.textContent = 'Online'; showToast('Você está online! 🟢'); }
+            else { toggle.classList.remove('active'); text.textContent = 'Offline'; showToast('Você está offline'); }
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tab + 'Section').classList.add('active');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function showDashboard() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; }
+        function logout() { if (currentUser) supabase.from('delivery_people').update({ is_online: false }).eq('id', currentUser.id); localStorage.removeItem('deliveryUser'); location.reload(); }
+        function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+        function subscribeToOrders() { supabase.channel('delivery_orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => { loadAvailableOrders(); loadMyDeliveries(); }).subscribe(); }
+    </script>
+</body>
+</html>
